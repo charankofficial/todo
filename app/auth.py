@@ -1,16 +1,29 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 import bcrypt
+import re  
 from app.firebase_connect import get_firestore_client
 
 auth = Blueprint('auth', __name__)
-
 db = get_firestore_client()
+
+def is_valid_password(password):
+    if (len(password) < 8 or 
+        not re.search(r"[A-Z]", password) or  
+        not re.search(r"[a-z]", password) or  
+        not re.search(r"[0-9]", password) or 
+        not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)): 
+        return False
+    return True
 
 @auth.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+
+        if not is_valid_password(password):
+            flash('Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.', category='error')
+            return render_template('signup.html')
 
         users_ref = db.collection('users')
         existing_user_query = users_ref.where('email', '==', email).get()
@@ -53,10 +66,9 @@ def login():
 
     return render_template('login.html')
 
+
 @auth.route('/logout', methods=['GET', 'POST'])
 def logout():
     session.pop('user_email', None)
     flash('You have been logged out.', category='success')
     return redirect(url_for('auth.login'))
-
-
