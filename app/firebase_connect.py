@@ -1,18 +1,20 @@
-import os
 import firebase_admin
 from firebase_admin import credentials, firestore
+import os
+import json
+from dotenv import load_dotenv
+load_dotenv()
+firebase_key_contents = os.getenv('FIREBASE_KEY_CONTENTS')
+if not firebase_key_contents:
+    raise ValueError("The FIREBASE_KEY_CONTENTS environment variable is not set.")
+try:
+    firebase_key_dict = json.loads(firebase_key_contents)
+except json.JSONDecodeError as e:
+    raise ValueError("The FIREBASE_KEY_CONTENTS environment variable is not a valid JSON.") from e
 
-# Directly referencing firebase_key.json from the app directory
-firebase_key_path = os.path.join(os.path.dirname(__file__), 'firebase_key.json')
-
-if not os.path.exists(firebase_key_path):
-    raise ValueError(f"The FIREBASE_KEY_PATH is not valid: {firebase_key_path}")
-
-# Use the service account key to connect to Firebase
-cred = credentials.Certificate(firebase_key_path)
+cred = credentials.Certificate(firebase_key_dict)
 firebase_admin.initialize_app(cred)
 
-# Initialize Firestore DB
 db = firestore.client()
 
 def get_firestore_client():
