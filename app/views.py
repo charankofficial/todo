@@ -1,72 +1,7 @@
-# from flask import Blueprint, render_template, request, redirect, url_for, session
-# from app.firebase_connect import get_firestore_client
-
-# views = Blueprint('views', __name__)
-# db = get_firestore_client()
-
-# @views.route('/')
-# def index():
-#     user_email = session.get('user_email', None)
-#     tasks = []
-
-#     if user_email:
-#         tasks_ref = db.collection('tasks').where('user', '==', user_email).stream()
-#         tasks = [{'id': task.id, **task.to_dict()} for task in tasks_ref]
-#     else:
-#         tasks = session.get('tasks', [])
-    
-#     return render_template('index.html', tasks=tasks, user=user_email)
-
-
-# @views.route('/add_task', methods=['POST'])
-# def add_task():
-#     task_text = request.form.get('task')
-
-#     if 'user_email' in session:
-#         user_email = session['user_email']
-#         db.collection('tasks').add({
-#             'user': user_email,
-#             'content': task_text,
-#             'completed': False
-#         })
-#     else:
-#         tasks = session.get('tasks', [])
-#         tasks.append({'content': task_text, 'completed': False})
-#         session['tasks'] = tasks
-
-#     return redirect(url_for('views.index'))
-
-
-# @views.route('/delete_task/<task_id>', methods=['POST'])
-# def delete_task(task_id):
-#     if 'user_email' in session:
-#         db.collection('tasks').document(task_id).delete()
-#     else:
-#         tasks = session.get('tasks', [])
-#         tasks = [task for task in tasks if task['content'] != task_id]
-#         session['tasks'] = tasks
-
-#     return redirect(url_for('views.index'))
-
-
-# @views.route('/toggle_task/<task_id>', methods=['POST'])
-# def toggle_task(task_id):
-#     if 'user_email' in session:
-#         task_ref = db.collection('tasks').document(task_id)
-#         task = task_ref.get().to_dict()
-#         task_ref.update({'completed': not task['completed']})
-#     else:
-#         tasks = session.get('tasks', [])
-#         for task in tasks:
-#             if task['content'] == task_id:
-#                 task['completed'] = not task['completed']
-#         session['tasks'] = tasks
-
-#     return redirect(url_for('views.index'))
 
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from app.firebase_connect import get_firestore_client
-import uuid  # Used to generate unique IDs for session tasks
+import uuid  
 
 views = Blueprint('views', __name__)
 db = get_firestore_client()
@@ -77,11 +12,9 @@ def index():
     tasks = []
 
     if user:
-        # Fetch tasks from Firebase Firestore for the logged-in user
         tasks_ref = db.collection('tasks').where('user', '==', user).stream()
         tasks = [{'id': task.id, **task.to_dict()} for task in tasks_ref]
     else:
-        # If user is not logged in, get tasks from session
         tasks = session.get('tasks', [])
 
     return render_template('index.html', tasks=tasks, user=user)
@@ -91,7 +24,6 @@ def add_task():
     task_text = request.form.get('task')
 
     if 'user_email' in session:
-        # If user is logged in, add task to Firebase Firestore
         user = session['user_email']
         db.collection('tasks').add({
             'user': user,
@@ -99,9 +31,8 @@ def add_task():
             'completed': False
         })
     else:
-        # If not logged in, store task in session
         tasks = session.get('tasks', [])
-        task_id = str(uuid.uuid4())  # Generate a unique ID for each task in session
+        task_id = str(uuid.uuid4()) 
         tasks.append({'id': task_id, 'content': task_text, 'completed': False})
         session['tasks'] = tasks
 
@@ -110,25 +41,21 @@ def add_task():
 @views.route('/delete_task/<task_id>', methods=['POST'])
 def delete_task(task_id):
     if 'user_email' in session:
-        # Delete task from Firestore if user is logged in
         db.collection('tasks').document(task_id).delete()
     else:
-        # For non-logged-in users, remove task from session
         tasks = session.get('tasks', [])
-        updated_tasks = [task for task in tasks if task['id'] != task_id]  # Filter out the task to delete
-        session['tasks'] = updated_tasks  # Update session with remaining tasks
+        updated_tasks = [task for task in tasks if task['id'] != task_id]  
+        session['tasks'] = updated_tasks
 
     return redirect(url_for('views.index'))
 
 @views.route('/toggle_task/<task_id>', methods=['POST'])
 def toggle_task(task_id):
     if 'user_email' in session:
-        # Toggle task completion in Firebase Firestore
         task_ref = db.collection('tasks').document(task_id)
         task = task_ref.get().to_dict()
         task_ref.update({'completed': not task['completed']})
     else:
-        # Toggle task completion in session for non-logged-in users
         tasks = session.get('tasks', [])
         for task in tasks:
             if task['id'] == task_id:
