@@ -2,7 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+.env
+app/firebase_key.json
 # C extensions
 *.so
 
